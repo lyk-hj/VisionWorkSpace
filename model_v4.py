@@ -3,28 +3,18 @@ from torch import nn
 
 c1_inc = 1
 c1_ouc = 16
-c2_ouc = 16
-c3_ouc = 32
-c4_inc = 64
+c2_ouc = 32
+c3_ouc = 64
 c4_ouc = 64
-c5_inc = 128
+c5_inc = 256
 c5_ouc = 32
-classes = 6
+classes = 9
 
 
 class Conv(nn.Module):
     def __init__(self, inc, ouc, k=3, s=1, p=0, g=1, act=True, drop=False) -> None:
         super(Conv, self).__init__()
-        self.conv = nn.Sequential(
-            nn.Conv2d(in_channels=inc,
-                      out_channels=ouc,
-                      kernel_size=k,
-                      stride=s,
-                      padding=p,
-                      groups=g,
-                      bias=False),
-            nn.Dropout(),
-        ) if drop else nn.Conv2d(in_channels=inc,
+        self.conv = nn.Conv2d(in_channels=inc,
                                  out_channels=ouc,
                                  kernel_size=k,
                                  stride=s,
@@ -33,10 +23,10 @@ class Conv(nn.Module):
                                  bias=False)
         self.bn = nn.BatchNorm2d(ouc)
         self.act = nn.ReLU() if act else nn.Identity()
-        self.pool = nn.MaxPool2d(2)
+        self.dropout = nn.Dropout(0.5 if drop else 0)
 
-    def forward(self, x, pool=False):
-        return self.act(self.bn(self.conv(x))) if not pool else self.pool(self.act(self.bn(self.conv(x))))
+    def forward(self, x):
+        return self.act(self.bn(self.dropout(self.conv(x))))
 
 
 class Concat(nn.Module):
@@ -59,6 +49,7 @@ class BlockNeck(nn.Module):
                       kernel_size=1,
                       stride=s,
                       groups=inc,
+                      bias=False,
                       ),
             nn.Conv2d(in_channels=inc,
                       out_channels=inc,
@@ -66,12 +57,14 @@ class BlockNeck(nn.Module):
                       stride=s,
                       padding=1,
                       groups=inc,
+                      bias=False
                       ),
             nn.Conv2d(in_channels=inc,
                       out_channels=ouc,
                       kernel_size=1,
                       stride=s,
                       groups=g,
+                      bias=False
                       ),
         )
         self.act = nn.ReLU() if act else nn.Identity()
@@ -85,31 +78,40 @@ class BlockNeck(nn.Module):
 class Model(nn.Module):
     def __init__(self) -> None:
         super(Model, self).__init__()
-        self.conv1 = Conv(inc=c1_inc, ouc=c1_ouc)  # in:24*24*1, out:22*22*16
-        self.conv2 = Conv(inc=c1_ouc, ouc=c2_ouc, g=c1_ouc)  # in:22*22*16, out:20*20*16
-        # max_pooling
-        self.conv3_1 = BlockNeck(inc=c2_ouc, ouc=c3_ouc)  # in:10*10*16, out:8*8*32
-        self.conv3_2 = Conv(inc=c3_ouc, ouc=c4_inc, p=1)  # in:8*8*32, out:8*8*64
-        self.conv3_3 = BlockNeck(inc=c4_inc,ouc=c4_inc)  # in:8*8*32, out:8*8*64
-        self.conv3_4 = Conv(inc=c4_inc,ouc=c4_inc, g=c4_inc, drop=True)  # in:8*8*64, out:8*8*64
-        # max_pooling
-        self.conv4_1 = Conv(inc=c4_inc, ouc=c4_ouc, g=c4_inc)  # in:4*4*64, out:2*2*64
-        self.conv4_2 = Conv(inc=c4_inc, ouc=c4_ouc, g=c4_inc, act=False, drop=True)  # in:4*4*64, out:2*2*64
+        # extend module in class will increase the memory of pytorch model file, but do not function in onnx
+        self.block_neck1 = BlockNeck(inc=c1_inc,ouc=c1_ouc)  # shortcut conjunction
+        self.conv1 = Conv(inc=c1_inc,ouc=c1_ouc,k=1)  # dimension up
+        # Max pooling 24->12
+        self.block_neck2 = BlockNeck(inc=c1_ouc,ouc=c2_ouc)
+        self.conv2 = Conv(inc=c1_ouc,ouc=c2_ouc,k=1)
+        # Max pooling 12->6
+        self.block_neck3 = BlockNeck(inc=c2_ouc,ouc=c3_ouc,drop=True)
+        self.conv3 = Conv(inc=c2_ouc,ouc=c3_ouc,k=1,g=c2_ouc,drop=True)
+        # Inception
+        self.conv4_1 = Conv(inc=c3_ouc,ouc=c4_ouc,k=1,g=c3_ouc)
+        self.conv4_2 = Conv(inc=c3_ouc,ouc=c4_ouc,k=3,p=1,g=c3_ouc,drop=True)
+        self.conv4_3 = Conv(inc=c3_ouc,ouc=c4_ouc,k=5,p=2,g=c3_ouc,drop=True)
+        self.conv4_4 = BlockNeck(inc=c3_ouc,ouc=c4_ouc,drop=True)
         self.concat = Concat()
+        # Max pooling
         self.dense = nn.Sequential(
-            nn.AdaptiveAvgPool2d(1),  # in:2*2*128, out:1*1*128
+            nn.AdaptiveAvgPool2d(1),
             Conv(inc=c5_inc, ouc=c5_ouc, k=1, drop=True),
             nn.Flatten(),
             nn.Linear(in_features=c5_ouc, out_features=classes, bias=False),
             nn.Softmax(1),
         )
+        self.max_pool = nn.MaxPool2d(2)
 
     def forward(self, x):
         # x=x.view(-1,1,24,24)#front is rows, back is cols
-        x = self.conv3_1(self.conv2(self.conv1(x), True))
-        x1 = self.conv3_2(x)
-        x2 = self.conv3_3(x1)
-        x = self.conv3_4(x1 + x2, True)
-        return self.dense(self.concat((self.conv4_1(x), self.conv4_2(x))))
+        hid1 = self.max_pool(self.block_neck1(x) + self.conv1(x))
+        hid2 = self.max_pool(self.block_neck2(hid1) + self.conv2(hid1))
+        hid3 = self.block_neck3(hid2) + self.conv3(hid2)
+        hid4 = self.max_pool(self.concat((hid3, self.conv4_1(hid3), self.conv4_2(hid3), self.conv4_3(hid3))))
+        return self.dense(hid4)
 
+if __name__ == "__main__":
+    model = Model()
+    print(model)
 

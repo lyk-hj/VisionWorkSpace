@@ -14,6 +14,8 @@ crop_element = [[0,0],[2,2],[4,0],[4,4],[0,4],  # 28
                 [0,0]]  # 24
 
 transform = transforms.Compose([
+    transforms.RandomRotation(degrees=20,expand=True),
+    transforms.Resize((24,24)),  # 这里的resize不是裁剪，是缩放
     transforms.ToTensor(),
 ])
 
@@ -94,8 +96,6 @@ class Mydataset(data.Dataset):
     def __getitem__(self, index):
         img_path = self.imgs_path[index]
         label = int(img_path[8])
-        if (img_path[8] == '6'):
-            label = 5
         src = cv2.imread(img_path)
         src = cv2.resize(src,(24,24))
         data = cv2.cvtColor(src, cv2.COLOR_BGR2GRAY)
@@ -103,9 +103,9 @@ class Mydataset(data.Dataset):
         if not self.is_verification:
             crop_mode = self.crop_flag[index]
             if crop_mode < 5:
-                data = clip_superfluous_pixel(data,label)
-                data = resize(data, (28, 28))
-                # data = out_of_shape(data, (63,28))
+                # data = clip_superfluous_pixel(data,label)
+                # data = resize(data, (28, 28))
+                data = out_of_shape(data, (63,28))
                 # print(data.size)
 
             elif crop_mode >= 5 and crop_mode < 10:
@@ -120,9 +120,9 @@ class Mydataset(data.Dataset):
                 # print(data.size)
 
             elif crop_mode >=14 and crop_mode < 18:
-                # data = clip_superfluous_pixel(data,label)
-                # data = resize(data, (27, 27))
-                data = stretch(data, (59,27), (27,27), crop_mode)
+                data = clip_superfluous_pixel(data,label)
+                data = resize(data, (27, 27))
+                # data = stretch(data, (59,27), (27,27), crop_mode)
                 # print(data.size)
 
             elif crop_mode >=18 and crop_mode < 22:
@@ -139,22 +139,29 @@ class Mydataset(data.Dataset):
                    crop_w_start:crop_w_start + 24]
             # if(label == 5):
             #     cv2.imwrite("./enhance_template/"+ img_path[8:],data)
-            #     cv2.imshow("data", data)
-            #     cv2.waitKey(0)
+            # cv2.imshow("data", data)
+            # cv2.waitKey(0)
+                # print(crop_mode)
         data = np.reshape(data.astype(np.float32) / 255.0, (1,24,24))
         return data,label
 
 #使用glob方法来获取数据图片的所有路径
-all_imgs_path = glob.glob(r'./data2/*.jpg')
-all_pngs_path = glob.glob(r'./data2/*.png')
-valid_imgs_path = glob.glob(r'./data3/*.jpg')
-extra_imgs_path = glob.glob(r"./data1/*.jpg")
-extra_valid_path = glob.glob(r'./data0/*.jpg')
-valid_imgs_path.extend(extra_valid_path)
-all_imgs_path.extend(extra_imgs_path)
-all_imgs_path.extend(all_pngs_path)
-# print(extra_imgs_path)
-# print(all_pngs_path)
+all_imgs_path = []
+valid_imgs_path = []
+data0_path = glob.glob(r'./data0/*g')
+data1_path = glob.glob(r"./data1/*g")
+data2_path = glob.glob(r'./data2/*g')
+data3_path = glob.glob(r'./data3/*g')
+data7_path = glob.glob(r"./data7/*g")
+
+
+# valid_imgs_path.extend(data0_path)
+valid_imgs_path.extend(data3_path)
+valid_imgs_path.extend(data7_path)
+
+all_imgs_path.extend(data1_path)
+all_imgs_path.extend(data2_path)
+
 
 # stronger train data
 strong_data_path=[]
@@ -193,9 +200,11 @@ valid_dataloader = data.DataLoader(valid_dataset,BATCH_SIZE,True,drop_last=True)
 # if __name__ == "__main__":
 #     data_generate()
 #
-# img = cv2.imread("./data1/1_35.jpg")
+# img = cv2.imread("./data2/6_227(0).jpg")
+# img = cv2.resize(img, (24, 24))
 # img = cv2.cvtColor(img,cv2.COLOR_BGR2GRAY)
-# _,img = cv2.threshold(img,10,255,cv2.THRESH_BINARY)
-# img = clip_superfluous_pixel(img)
+# _,img = cv2.threshold(img,0,255,cv2.THRESH_BINARY or cv2.THRESH_OTSU)
+# img = stretch(img, (59,27), (27,27), 5)
+# # img = clip_superfluous_pixel(img)
 # cv2.imshow("img",img)
 # cv2.waitKey(0)

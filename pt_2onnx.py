@@ -1,12 +1,12 @@
 import torch.onnx
-from hj_num_v3 import Model
+from hj_num_v4 import Model
 
 
 # 创建.pth模型
 
 # model = Model()
 # 加载权重
-file_name='2023_3_3_hj_num_1'
+file_name='2023_3_15_hj_num_2'
 model_path = './weight/'+file_name+'.pt'
 save_path = './onnx_model/'+file_name+'.onnx'
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
