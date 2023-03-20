@@ -7,8 +7,8 @@ from torch.autograd import Variable
 from model_v4 import Model
 import hj_generate_v4 as hj_generate
 
-file_name = '2023_3_15_hj_num_2'
-new_name = '2023_3_15_hj_num_2'
+file_name = '2023_3_16_hj_num_1'
+new_name = '2023_3_16_hj_num_1'
 pre_train_name = '2023_3_11_hj_num_1'
 model_path = './weight/' + file_name + '.pt'
 save_path = './weight/' + new_name + '.pt'
@@ -78,12 +78,12 @@ def train():
     # model = Model()
 
     # model.load_state_dict(torch.load(model_path))
-    epochs = 10
+    epochs = 15
     lr = 0.00001
     loss_fn = CrossEntropyLoss()
     optimizer = AdamW(filter(lambda p:p.requires_grad, model.parameters()), lr=lr, weight_decay=0.0005)
     # optimizer=SGD(model.parameters(),lr=lr,weight_decay=0.09,momentum=0.99)
-    scheduler = torch.optim.lr_scheduler.ExponentialLR(optimizer, gamma=0.9)
+    scheduler = torch.optim.lr_scheduler.ExponentialLR(optimizer, gamma=0.89)
     print(model)
     model = model.to(device)
 

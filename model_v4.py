@@ -91,7 +91,7 @@ class Model(nn.Module):
         self.conv4_1 = Conv(inc=c3_ouc,ouc=c4_ouc,k=1,g=c3_ouc)
         self.conv4_2 = Conv(inc=c3_ouc,ouc=c4_ouc,k=3,p=1,g=c3_ouc,drop=True)
         self.conv4_3 = Conv(inc=c3_ouc,ouc=c4_ouc,k=5,p=2,g=c3_ouc,drop=True)
-        self.conv4_4 = BlockNeck(inc=c3_ouc,ouc=c4_ouc,drop=True)
+        self.conv4_4 = BlockNeck(inc=c3_ouc,ouc=c4_ouc,drop=True)  # 即使没有调用，pt文件也会保存这一层结构
         self.concat = Concat()
         # Max pooling
         self.dense = nn.Sequential(

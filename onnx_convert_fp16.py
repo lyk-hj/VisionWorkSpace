@@ -8,7 +8,7 @@ from onnxconverter_common.float16 import convert_np_to_float16
 import numpy as np
 import onnx
 
-file_name='2023_2_26_hj_num_2'
+file_name='2023_3_16_hj_num_1'
 model_path = './onnx_model/'+file_name+'.onnx'
 save_path = './onnx_model/'+file_name+'_fp16.onnx'
 
