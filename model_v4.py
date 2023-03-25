@@ -28,7 +28,6 @@ class Conv(nn.Module):
     def forward(self, x):
         return self.act(self.bn(self.dropout(self.conv(x))))
 
-
 class Concat(nn.Module):
     # Concatenate a list of tensors along dimension
     def __init__(self, dimension=1):  # B,C,H,W
@@ -38,7 +37,17 @@ class Concat(nn.Module):
     def forward(self, x):
         return torch.cat(x, self.d)
 
+class SPPNet(nn.Module):
+    def __init__(self, level=2, size=2):
+        super(SPPNet, self).__init__()
+        self.spp = [nn.AdaptiveMaxPool2d(size**i) for i in range(level)]  # overlap when cannot exact division
+        self.flatten = nn.Flatten()
 
+    def forward(self,x):
+        x = [self.flatten(s(x)) for s in self.spp]
+        return torch.cat(x,1)
+
+# spell wrong, reality is BottleNeck
 class BlockNeck(nn.Module):
     #  do not change the scale, just alter the channel
     def __init__(self, inc, ouc, s=1, g=1, act=True, drop=False) -> None:
@@ -74,7 +83,6 @@ class BlockNeck(nn.Module):
     def forward(self, x):
         return self.act(self.bn(self.dropout(self.block_neck(x))))
 
-
 class Model(nn.Module):
     def __init__(self) -> None:
         super(Model, self).__init__()
@@ -91,11 +99,11 @@ class Model(nn.Module):
         self.conv4_1 = Conv(inc=c3_ouc,ouc=c4_ouc,k=1,g=c3_ouc)
         self.conv4_2 = Conv(inc=c3_ouc,ouc=c4_ouc,k=3,p=1,g=c3_ouc,drop=True)
         self.conv4_3 = Conv(inc=c3_ouc,ouc=c4_ouc,k=5,p=2,g=c3_ouc,drop=True)
-        self.conv4_4 = BlockNeck(inc=c3_ouc,ouc=c4_ouc,drop=True)  # 即使没有调用，pt文件也会保存这一层结构
+        # self.conv4_4 = BlockNeck(inc=c3_ouc,ouc=c4_ouc,drop=True)  # 即使没有调用，pt文件也会保存这一层结构, 但onnx不会
         self.concat = Concat()
         # Max pooling
         self.dense = nn.Sequential(
-            nn.AdaptiveAvgPool2d(1),
+            nn.AdaptiveAvgPool2d(1),  # it is something like the SPPNet, SPPNet is not indispensable for this model
             Conv(inc=c5_inc, ouc=c5_ouc, k=1, drop=True),
             nn.Flatten(),
             nn.Linear(in_features=c5_ouc, out_features=classes, bias=False),
@@ -112,6 +120,5 @@ class Model(nn.Module):
         return self.dense(hid4)
 
 if __name__ == "__main__":
-    model = Model()
-    print(model)
-
+    model = SPPNet()
+    # print(model)
