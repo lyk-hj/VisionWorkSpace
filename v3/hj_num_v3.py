@@ -9,8 +9,8 @@ import hj_generate_v3 as hj_generate
 
 file_name='2023_3_3_hj_num_1'
 new_name='2023_3_3_hj_num_1'
-model_path = './weight/'+file_name+'.pt'
-save_path = './weight/'+new_name+'.pt'
+model_path = '../weight/'+file_name+'.pt'
+save_path = '../weight/'+new_name+'.pt'
 
 def show(train_loss,
          train_acc,

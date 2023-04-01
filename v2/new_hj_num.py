@@ -10,8 +10,8 @@ import hj_generate_v2 as hj_generate
 
 file_name='2023_2_16_hj_num_1'
 new_name='2023_2_16_hj_num_1'
-model_path = './weight/'+file_name+'.pt'
-save_path = './weight/'+new_name+'.pt'
+model_path = '../weight/'+file_name+'.pt'
+save_path = '../weight/'+new_name+'.pt'
 
 
 def train():

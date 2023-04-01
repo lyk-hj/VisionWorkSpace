@@ -3,7 +3,6 @@ from torch.autograd import Variable
 import torch
 import tensorflow.keras as keras
 import numpy as np
-from new_hj_num import Model
 
 file_name='2023_2_1_hj_num_2'
 input_path = './weight/'+file_name+'.pt'

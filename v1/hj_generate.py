@@ -25,7 +25,7 @@ class Mydataset(data.Dataset):
         img_path = self.imgs_path[index]
         label = self.labels[index]
         src = cv2.imread(img_path)
-        data = cv2.cvtColor(src, cv2.COLOR_BGR2GRAY)
+        data = cv2.resize(cv2.cvtColor(src, cv2.COLOR_BGR2GRAY),(20,30))
         data = data.astype(np.float32) / 255.0
         return data,label
 # 返回长度
@@ -33,8 +33,8 @@ class Mydataset(data.Dataset):
         return len(self.imgs_path)
 # def data_generate():
     #使用glob方法来获取数据图片的所有路径
-all_imgs_path = glob.glob(r'./data2/*.jpg')
-check_imgs_path = glob.glob(r'./data3/*.jpg')
+all_imgs_path = glob.glob(r'../data2/*.jpg')
+check_imgs_path = glob.glob(r'../data3/*.jpg')
 # for var in all_imgs_path:
 #     print(var)
 
@@ -46,13 +46,13 @@ all_labels = []
 check_labels = []
 class_id=0
 for img in all_imgs_path:
-    class_id = int(img[8])
+    class_id = int(img[9])
     if (img[8] == '6'):
         class_id = 5
     all_labels.append(class_id)
 
 for img in check_imgs_path:
-    class_id = int(img[8])
+    class_id = int(img[9])
     if (img[8] == '6'):
         class_id = 5
     check_labels.append(class_id)
@@ -88,9 +88,9 @@ test_dataloader = data.DataLoader(test_dataset,BATCH_SIZE,True,drop_last=True)#g
 check_dataset = Mydataset(check_imgs_path,check_labels,transform)
 check_dataloader = data.DataLoader(check_dataset,BATCH_SIZE,True,drop_last=True)
 
-print(next(iter(train_dataloader)))
-print(next(iter(test_dataloader)))
-print(next(iter(check_dataloader)))
+# print(next(iter(train_dataloader)))
+# print(next(iter(test_dataloader)))
+# print(next(iter(check_dataloader)))
 
 # if __name__ == "__main__":
 #     data_generate()

@@ -26,8 +26,8 @@ class Mydataset(data.Dataset):
         img_path = self.imgs_path[index]
         # print(img_path)
         # print(img_path[8])
-        label = int(img_path[8])
-        if (img_path[8] == '6'):
+        label = int(img_path[9])
+        if (img_path[9] == '6'):
             label = 5
         # label = self.labels[index]
         src = cv2.imread(img_path)
@@ -67,9 +67,9 @@ class Mydataset(data.Dataset):
         return len(self.imgs_path)
 
 #使用glob方法来获取数据图片的所有路径
-all_imgs_path = glob.glob(r'./data2/*.jpg')
-check_imgs_path = glob.glob(r'./data3/*.jpg')
-extra_imgs_path = glob.glob(r"./data1/*.jpg")
+all_imgs_path = glob.glob(r'../data2/*.jpg')
+check_imgs_path = glob.glob(r'../data3/*.jpg')
+extra_imgs_path = glob.glob(r"../data1/*.jpg")
 # print(extra_imgs_path)
 
 # stronger train data
@@ -124,9 +124,9 @@ test_dataloader = data.DataLoader(test_dataset,BATCH_SIZE,True,drop_last=True)#g
 check_dataset = Mydataset(check_imgs_path,[],transform,is_verification=True)
 check_dataloader = data.DataLoader(check_dataset,BATCH_SIZE,True,drop_last=True)
 
-# print(next(iter(train_dataloader)))
-# print(next(iter(test_dataloader)))
-# print(next(iter(check_dataloader)))
+print(next(iter(train_dataloader)))
+print(next(iter(test_dataloader)))
+print(next(iter(check_dataloader)))
 
 # if __name__ == "__main__":
 #     data_generate()

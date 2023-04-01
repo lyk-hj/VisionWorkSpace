@@ -1,14 +1,13 @@
 import torch
 from torch.nn import CrossEntropyLoss
 from torch.optim import Adam
-from torch.optim import SGD
 from torch.autograd import Variable
 import hj_generate
 
 file_name='2023_1_31_hj_num_1'
 new_name='2023_1_31_hj_num_1'
-model_path = './weight/'+file_name+'.pt'
-save_path = './weight/'+new_name+'.pt'
+model_path = '../weight/'+file_name+'.pt'
+save_path = '../weight/'+new_name+'.pt'
 
 class Model(torch.nn.Module):
     def __init__(self) -> None:
@@ -56,7 +55,8 @@ class Model(torch.nn.Module):
         return x
 
 def train():
-    device=torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    # device=torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    device = "cpu"
     model = torch.load(model_path, map_location=device)
     # model = Model()
     epochs=10
@@ -135,16 +135,16 @@ def train():
             best_model = model
 
         print("Loss is {},Train old Accuracy is {},Test old Accuracy is {},Check old Accuracy is {}".format
-        (running_loss/len(hj_generate.train_dataset),
-         running_correct_old/len(hj_generate.train_dataset),
-         testing_correct_old/len(hj_generate.test_dataset),
-         check_correct_old/len(hj_generate.check_dataset)))
+        (running_loss / len(hj_generate.train_dataset),
+         running_correct_old / len(hj_generate.train_dataset),
+         testing_correct_old / len(hj_generate.test_dataset),
+         check_correct_old / len(hj_generate.check_dataset)))
 
         print("Loss is {},Train new Accuracy is {},Test new Accuracy is {},Check new Accuracy is {}".format
-        (running_loss/len(hj_generate.train_dataset),
-         running_correct_new/len(hj_generate.train_dataset),
-         testing_correct_new/len(hj_generate.test_dataset),
-         check_correct_new/len(hj_generate.check_dataset)))
+        (running_loss / len(hj_generate.train_dataset),
+         running_correct_new / len(hj_generate.train_dataset),
+         testing_correct_new / len(hj_generate.test_dataset),
+         check_correct_new / len(hj_generate.check_dataset)))
 
         scheduler.step()
     torch.save(best_model,save_path)

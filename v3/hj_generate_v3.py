@@ -93,8 +93,8 @@ class Mydataset(data.Dataset):
 # 进行切片
     def __getitem__(self, index):
         img_path = self.imgs_path[index]
-        label = int(img_path[8])
-        if (img_path[8] == '6'):
+        label = int(img_path[9])
+        if (img_path[9] == '6'):
             label = 5
         src = cv2.imread(img_path)
         src = cv2.resize(src,(24,24))
@@ -137,19 +137,19 @@ class Mydataset(data.Dataset):
             crop_w_start = crop_element[crop_mode][1]
             data = data[crop_h_start:crop_h_start + 24,
                    crop_w_start:crop_w_start + 24]
-            if(label == 5):
-                cv2.imwrite("./enhance_template/"+ img_path[8:],data)
-                cv2.imshow("data", data)
-                cv2.waitKey(0)
+            # if(label == 5):
+            #     cv2.imwrite("../enhance_template/"+ img_path[8:],data)
+            #     cv2.imshow("data", data)
+            #     cv2.waitKey(0)
         data = np.reshape(data.astype(np.float32) / 255.0, (1,24,24))
         return data,label
 
 #使用glob方法来获取数据图片的所有路径
-all_imgs_path = glob.glob(r'./data2/*.jpg')
-all_pngs_path = glob.glob(r'./data2/*.png')
-valid_imgs_path = glob.glob(r'./data3/*.jpg')
-extra_imgs_path = glob.glob(r"./data1/*.jpg")
-extra_valid_path = glob.glob(r'./data0/*.jpg')
+all_imgs_path = glob.glob(r'../data2/*.jpg')
+all_pngs_path = glob.glob(r'../data2/*.png')
+valid_imgs_path = glob.glob(r'../data3/*.jpg')
+extra_imgs_path = glob.glob(r"../data1/*.jpg")
+extra_valid_path = glob.glob(r'../data0/*.jpg')
 valid_imgs_path.extend(extra_valid_path)
 all_imgs_path.extend(extra_imgs_path)
 all_imgs_path.extend(all_pngs_path)

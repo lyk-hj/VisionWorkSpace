@@ -42,7 +42,7 @@ def random_data_enhance(data, label, enhance_flag, crop_mode):
     }
     # print(enhance_flag)
     fun = functions[enhance_flag]
-    act_long_border = np.random.randint(29,64)
+    act_long_border = np.random.randint(29,48)
     act_size = (out_size[0],act_long_border) if random.randint(0,1) else (act_long_border,out_size[1])
     return fun(data=data, out_size=out_size,
                act_size=act_size, label=label, crop_mode=crop_mode)
@@ -133,7 +133,7 @@ class Mydataset(data.Dataset):
     # 进行切片
     def __getitem__(self, index):
         img_path = self.imgs_path[index]
-        label = int(img_path[8])
+        label = int(img_path[9])
         src = cv2.imread(img_path)
         data = cv2.cvtColor(src, cv2.COLOR_BGR2GRAY)
         _, data = cv2.threshold(data, 0, 255, cv2.THRESH_BINARY or cv2.THRESH_OTSU)
@@ -143,36 +143,6 @@ class Mydataset(data.Dataset):
             crop_mode = self.crop_flag[index]
             enhance_flag = random.randint(0, 3)
             data = random_data_enhance(data,label,enhance_flag,crop_mode)
-            # if crop_mode < 5:
-            #     # data = clip_superfluous_pixel(data,label)
-            #     # data = resize(data, (28, 28))
-            #     data = out_of_shape(data, (28, 28), (28, 63))
-            #     # print(data.size)
-            #
-            # elif crop_mode >= 5 and crop_mode < 10:
-            #     # data = clip_superfluous_pixel(data,label)
-            #     # data = resize(data, (26,26))
-            #     data = stretch(data, (26, 26), (32, 26), crop_mode)
-            #     # print(data.size)
-            #
-            # elif crop_mode >= 10 and crop_mode < 14:
-            #     data = resize(data, (25, 25))
-            #     # data = stretch(data, (41,25), (25,25), crop_mode)
-            #     # print(data.size)
-            #
-            # elif crop_mode >= 14 and crop_mode < 18:
-            #     data = clip_superfluous_pixel(data, (27, 27), label)
-            #     # data = resize(data, (27, 27))
-            #     # data = stretch(data, (59,27), (27,27), crop_mode)
-            #     # print(data.size)
-            #
-            # elif crop_mode >= 18 and crop_mode < 22:
-            #     data = stretch(data, (27, 27), (41, 27), crop_mode)
-            #
-            # elif crop_mode == 22:
-            #     # data = resize(data, (24, 24))
-            #     data = stretch(data, (24, 24), (24, 30), crop_mode)
-            #     # print(data.size)
 
             crop_h_start = crop_element[crop_mode][0]
             crop_w_start = crop_element[crop_mode][1]
@@ -191,18 +161,18 @@ class Mydataset(data.Dataset):
 # 使用glob方法来获取数据图片的所有路径
 all_imgs_path = []
 valid_imgs_path = []
-data0_path = glob.glob(r'./data0/*g')
-data1_path = glob.glob(r"./data1/*g")
-data2_path = glob.glob(r'./data2/*g')
-data3_path = glob.glob(r'./data3/*g')
-data7_path = glob.glob(r"./data7/*g")
+data0_path = glob.glob(r'../data0/*g')
+data1_path = glob.glob(r"../data1/*g")
+data2_path = glob.glob(r'../data2/*g')
+data3_path = glob.glob(r'../data3/*g')
+data7_path = glob.glob(r"../data7/*g")
 
 # valid_imgs_path.extend(data0_path)
 valid_imgs_path.extend(data3_path)
 valid_imgs_path.extend(data7_path)
 
 all_imgs_path.extend(data1_path)
-all_imgs_path.extend(data2_path)
+# all_imgs_path.extend(data2_path)
 
 # stronger train data
 strong_data_path = []
@@ -212,7 +182,7 @@ for i in range(23):
         strong_data_path.append(img)
         data_crop_flags.append(i)
 
-BATCH_SIZE = 4
+BATCH_SIZE = 32
 
 index = np.random.permutation(len(strong_data_path))
 all_imgs_path = np.array(strong_data_path)[index]  # 打乱数据
@@ -232,7 +202,7 @@ test_dataset = Mydataset(test_imgs, test_crop_flags, transform, is_verification=
 test_dataloader = data.DataLoader(test_dataset, BATCH_SIZE, True, drop_last=True)  # get test dataloader
 
 valid_dataset = Mydataset(valid_imgs_path, [], transform, is_verification=True)
-valid_dataloader = data.DataLoader(valid_dataset, BATCH_SIZE, True, drop_last=True)
+valid_dataloader = data.DataLoader(valid_dataset, BATCH_SIZE, True, drop_last=False)
 
 # print(next(iter(train_dataloader)))
 # print(next(iter(test_dataloader)))

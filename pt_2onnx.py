@@ -1,14 +1,12 @@
 import torch.onnx
-from hj_num_v4 import Model
 from onnxmltools.utils.float16_converter import convert_float_to_float16
 # from onnxconverter_common import convert_tensor_float_to_float16
-from onnxconverter_common.float16 import convert_np_to_float16
-import numpy as np
-import onnx,os
+import onnx, os
+from v4.model_v4 import MultiTaskModel
 
 fp16 = True
 dynamic = True
-file_name='2023_3_16_hj_num_1'
+file_name='2023_3_26_hj_num_1'
 model_path = './weight/'+file_name+'.pt'
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 # device = torch.device('cpu')
