@@ -1,0 +1,6 @@
+1		  loss_val		  train_c		  train_e		  test_c		  test_e		  valid_c		  valid_e
+		  1.472709		  0.889962		  0.900807		  0.886792		  0.897680		  0.510452		  0.524900
+2		  loss_val		  train_c		  train_e		  test_c		  test_e		  valid_c		  valid_e
+		  1.471317		  0.891713		  0.902257		  0.895947		  0.906077		  0.515727		  0.533118
+3		  loss_val		  train_c		  train_e		  test_c		  test_e		  valid_c		  valid_e
+		  1.468446		  0.894676		  0.905276		  0.890617		  0.901402		  0.510807		  0.526145

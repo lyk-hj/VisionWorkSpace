@@ -1,0 +1,2 @@
+1		  loss_val		  train_c		  train_e		  test_c		  test_e		  valid_c		  valid_e
+		  1.000000		  1.000000		  5.000000		  4.000000		  7.000000		  8.000000		  6.000000

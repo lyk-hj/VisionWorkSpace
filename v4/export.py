@@ -2,6 +2,7 @@ import torch.onnx
 from onnxmltools.utils.float16_converter import convert_float_to_float16
 import onnx, os
 from model_v4 import MultiTaskModel
+from model_v4 import Model
 from pytorch2keras.converter import pytorch_to_keras
 from torch.autograd import Variable
 import torch
@@ -10,7 +11,7 @@ import numpy as np
 
 fp16 = True
 dynamic = True
-file_name='2023_3_16_hj_num_1'
+file_name='2023_4_9_hj_num_1'
 model_path = '../weight/'+file_name+'.pt'
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 print(device)
@@ -22,7 +23,8 @@ def convert_fp16(save_path):
     onnx.save_model(fp16_onnx_model,save_path)
 
 def export(model, save_path):
-    input_data = torch.randn(1, 1, 22, 30, device=device)
+    # python rules height before width, while opencv rules width before height
+    input_data = torch.randn(1, 1, 30, 22, device=device)
 
     # 转化为onnx模型
     input_names = ['input']
@@ -39,7 +41,7 @@ def pt_2onnx():
     model.to(device)
     model.eval()
 
-    initial_path = '../onnx_model/' + file_name + '__/'
+    initial_path = '../onnx_model/' + file_name + '/'
     if not os.path.exists(initial_path):
         os.mkdir(initial_path)
 
@@ -61,13 +63,13 @@ def pt2h5():
     pt_model.to(device)
     pt_model.eval()
     # Make dummy variables (and checking if the model works)
-    input_np = np.random.uniform(0, 1, (1, 1, 30, 20))
+    input_np = np.random.uniform(0, 1, (1, 1, 30, 22))
     input_var = Variable(torch.FloatTensor(input_np)).to(device)
     output = pt_model(input_var)
 
     # Convert the model!
     k_model = \
-        pytorch_to_keras(pt_model, input_var, (1, 30, 20),
+        pytorch_to_keras(pt_model, input_var, (1, 30, 22),
                          verbose=True, name_policy='renumerate')
 
     # Save model to SavedModel format

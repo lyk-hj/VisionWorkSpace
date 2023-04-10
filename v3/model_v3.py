@@ -1,5 +1,6 @@
 import torch
 from torch import nn
+from torchstat import stat
 
 c1_inc = 1
 c1_ouc = 16
@@ -112,3 +113,7 @@ class Model(nn.Module):
         return self.dense(self.concat((self.conv4_1(x),self.conv4_2(x))))
 
 
+if __name__ == "__main__":
+    model = torch.load('../weight/2023_3_3_hj_num_1.pt').to("cpu")
+    print(model)
+    stat(model, (1, 30, 22))

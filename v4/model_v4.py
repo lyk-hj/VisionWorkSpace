@@ -1,8 +1,12 @@
 import torch
 from torch import nn
+from torchstat import stat
+from thop import profile
+from fvcore.nn import FlopCountAnalysis, parameter_count_table
 # from hj_generate_v4_5 import classes
 
-c1_inc = 1
+c0_inc = 1
+c1_inc = 3
 c1_ouc = 16
 c2_ouc = 32
 c3_ouc = 64
@@ -98,13 +102,14 @@ class FC(nn.Module):
 
 
     def forward(self, x):
-        return self.act(self.dropout(self.bn(self.fc(x))))
+        return self.dropout(self.act(self.bn(self.fc(x))))
 
 
 class Model(nn.Module):
     def __init__(self) -> None:
         super(Model, self).__init__()
         # extend module in class will increase the memory of pytorch model file, but do not function in onnx
+        self.conv0 = Conv(inc=c0_inc,ouc=c1_inc, k=3, p=1)
         self.block_neck1 = BlockNeck(inc=c1_inc, ouc=c1_ouc)  # shortcut conjunction
         self.conv1 = Conv(inc=c1_inc, ouc=c1_ouc, k=1)  # dimension up
         # Max pooling 24->12
@@ -120,23 +125,26 @@ class Model(nn.Module):
         # self.conv4_4 = BlockNeck(inc=c3_ouc,ouc=c4_ouc,drop=True)  # 即使没有调用，pt文件也会保存这一层结构, 但onnx不会
         self.concat = Concat()
         # Max pooling 6->3
+        # AdaptiveMaxPool2d是自适应kernel，故动态尺寸输入时会出现输出0尺寸，
+        # AdaptiveAveragePool2d是对输入求平均即可，故不会为0尺寸输出，即使0尺寸也会为1尺寸输出
         self.dense = nn.Sequential(
             nn.AdaptiveMaxPool2d(1),  # it is something like the SPPNet, SPPNet is not indispensable for this model
             Conv(inc=c5_inc, ouc=c5_ouc, k=1),
             nn.Flatten(),
             nn.Dropout(),
-            FC(ins=c5_ouc, ous=classes, bias=False, bn=False),
+            nn.Linear(in_features=c5_ouc, out_features=classes, bias=False),
             nn.Softmax(1),
         )
         self.max_pool = nn.MaxPool2d(2)
 
     def forward(self, x):
         # x=x.view(-1,1,24,24)#front is rows, back is cols
+        x = self.conv0(x)
         hid1 = self.max_pool(self.block_neck1(x) + self.conv1(x))
         hid2 = self.max_pool(self.block_neck2(hid1) + self.conv2(hid1))
         hid3 = self.block_neck3(hid2) + self.conv3(hid2)
-        hid4 = self.max_pool(self.concat((hid3, self.conv4_1(hid3), self.conv4_2(hid3), self.conv4_3(hid3))))
-        return self.dense(hid4)
+        hid5 = self.max_pool(self.concat((hid3, self.conv4_1(hid3), self.conv4_2(hid3), self.conv4_3(hid3))))
+        return self.dense(hid5)
 
 
 class MultiTaskModel(nn.Module):
@@ -156,10 +164,10 @@ class MultiTaskModel(nn.Module):
         self.conv4_2 = Conv(inc=c3_ouc, ouc=c4_ouc, k=3, p=1, g=c3_ouc)
         self.conv4_3 = Conv(inc=c3_ouc, ouc=c4_ouc, k=5, p=2, g=c3_ouc)
         # self.conv4_4 = BlockNeck(inc=c3_ouc,ouc=c4_ouc,drop=True)  # 即使没有调用，pt文件也会保存这一层结构, 但onnx不会
-        self.concat = Concat()
+        # self.concat = Concat()
         # Max pooling 6->3
         self.dense = nn.Sequential(
-            nn.AdaptiveAvgPool2d(1),
+            nn.AdaptiveMaxPool2d(1),
             Conv(inc=c5_inc, ouc=c5_ouc, k=1),
             nn.Flatten(),
             nn.Dropout(),
@@ -173,11 +181,53 @@ class MultiTaskModel(nn.Module):
         hid1 = self.max_pool(self.block_neck1(x) + self.conv1(x))
         hid2 = self.max_pool(self.block_neck2(hid1) + self.conv2(hid1))
         hid3 = self.block_neck3(hid2) + self.conv3(hid2)
-        hid4 = self.max_pool(self.concat((hid3, self.conv4_1(hid3), self.conv4_2(hid3), self.conv4_3(hid3))))
+        hid4 = self.max_pool(torch.cat((hid3, self.conv4_1(hid3), self.conv4_2(hid3), self.conv4_3(hid3)), dim=1))
         fc = self.dense(hid4)
-        output = self.concat([self.softmax(fc[:, :2]), self.softmax(fc[:, 2:])])
+        output = self.concat([self.softmax(fc[:, :2]), self.softmax(fc[:, 2:classes+2])])  # ends should point out
         return output
 
-# if __name__ == "__main__":
-# model = SPPNet()
-# print(model)
+class Model9(nn.Module):
+    def __init__(self) -> None:
+        super(Model9, self).__init__()
+        # extend module in class will increase the memory of pytorch model file, but do not function in onnx
+        self.block_neck1 = BlockNeck(inc=c0_inc, ouc=c1_ouc)  # shortcut conjunction
+        self.conv1 = Conv(inc=c0_inc, ouc=c1_ouc, k=1)  # dimension up
+        # Max pooling 24->12
+        self.block_neck2 = BlockNeck(inc=c1_ouc, ouc=c2_ouc)
+        self.conv2 = Conv(inc=c1_ouc, ouc=c2_ouc, k=1)
+        # Max pooling 12->6
+        self.block_neck3 = BlockNeck(inc=c2_ouc, ouc=c3_ouc)
+        self.conv3 = Conv(inc=c2_ouc, ouc=c3_ouc, k=1, g=c2_ouc)
+        # Inception
+        self.conv4_1 = Conv(inc=c3_ouc, ouc=c4_ouc, k=1, g=c3_ouc)
+        self.conv4_2 = Conv(inc=c3_ouc, ouc=c4_ouc, k=3, p=1, g=c3_ouc)
+        self.conv4_3 = Conv(inc=c3_ouc, ouc=c4_ouc, k=5, p=2, g=c3_ouc)
+        # self.conv4_4 = BlockNeck(inc=c3_ouc,ouc=c4_ouc,drop=True)  # 即使没有调用，pt文件也会保存这一层结构, 但onnx不会
+        self.concat = Concat()
+        # Max pooling 6->3
+        # AdaptiveMaxPool2d是自适应kernel，故动态尺寸输入时会出现输出0尺寸，
+        # AdaptiveAveragePool2d是对输入求平均即可，故不会为0尺寸输出，即使0尺寸也会为1尺寸输出
+        self.dense = nn.Sequential(
+            nn.AdaptiveMaxPool2d(1),  # it is something like the SPPNet, SPPNet is not indispensable for this model
+            nn.Flatten(),
+            nn.Dropout(),
+            FC(ins=c5_inc,ous=c5_ouc, drop=True, act=True),
+            nn.Linear(in_features=c5_ouc, out_features=classes, bias=False),
+            nn.Softmax(1),
+        )
+        self.max_pool = nn.MaxPool2d(2)
+
+    def forward(self, x):
+        # x=x.view(-1,1,24,24)#front is rows, back is cols
+        hid1 = self.max_pool(self.block_neck1(x) + self.conv1(x))
+        hid2 = self.max_pool(self.block_neck2(hid1) + self.conv2(hid1))
+        hid3 = self.block_neck3(hid2) + self.conv3(hid2)
+        hid5 = self.max_pool(self.concat((hid3, self.conv4_1(hid3), self.conv4_2(hid3), self.conv4_3(hid3))))
+        return self.dense(hid5)
+
+
+if __name__ == "__main__":
+    model = Model()
+    print(model)
+    stat(model, (1, 30, 22))
+

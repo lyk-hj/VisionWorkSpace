@@ -1,3 +1,5 @@
+import random
+from visualize_train import hl_visualize
 import torch
 from torch.nn import CrossEntropyLoss
 from torch.nn.functional import cross_entropy
@@ -6,13 +8,14 @@ from torch.optim import SGD
 from torch.optim import AdamW
 from torch.autograd import Variable
 from model_v4 import MultiTaskModel
+from model_v4 import Model
 import hj_generate_v4_5 as hj_generate
 import torch.onnx
 import os
 import cv2
 
-file_name = '2023_4_1_hj_num_1'
-new_name = '2023_3_27_hj_num_1'
+file_name = '2023_4_6_hj_num_1'
+new_name = '2023_4_6_hj_num_1'
 pre_train_name = '2023_3_11_hj_num_1'
 model_path = '../weight/' + file_name + '.pt'
 save_path = '../weight/' + new_name + '.pt'
@@ -110,41 +113,10 @@ def infer_data_process(model, data_loader):
 
 
 def export_train_data(train_result):
-    # 1 train_loss train_confidence train_equality test_confidence test_equality valid_confidence valid_equality\n
-    train_output = "../weight/" + file_name + '/'
+    train_output = "../weight/" + new_name + '/'
     if not os.path.exists(train_output):
         os.mkdir(train_output)
-    with open(train_output + 'train_result.txt', 'a') as f_txt:
-        with open(train_output + 'train_result.txt', 'r') as n_txt:
-            memories = int(len(n_txt.readlines()) / 2)
-        n_txt.close()
-        content = str(memories + 1)
-        content += "\t\t  loss_val"
-        content += "\t\t  train_oc"
-        content += "\t\t  train_oe"
-        content += "\t\t  train_cc"
-        content += "\t\t  train_ce"
-        content += "\t\t  test_oc"
-        content += "\t\t  test_oe"
-        content += "\t\t  test_cc"
-        content += "\t\t  test_ce"
-        content += "\t\t  valid_oc"
-        content += "\t\t  valid_oe"
-        content += "\t\t  valid_cc"
-        content += "\t\t  valid_ce"
-        content += "\n"
-        for result in train_result:
-            content += ("\t\t  " + str("{:5f}".format(result)))
-        content += '\n'
-        f_txt.write(content)
-    f_txt.close()
-
-
-def export_train_data_gpt(train_result):
-    train_output = "../weight/" + file_name + '/'
-    if not os.path.exists(train_output):
-        os.mkdir(train_output)
-    with open(train_output + 'train_result.txt', 'a+') as f:
+    with open(train_output + 'train_result.txt', 'r+') as f:
         memories = int(len(f.readlines()) / 2)
         content = f"{memories + 1}\t\t  loss_val\t\t  train_oc\t\t  train_oe\t\t  train_cc\t\t  " \
                   f"train_ce\t\t  test_oc\t\t  test_oe\t\t  test_cc\t\t  test_ce\t\t  " \
@@ -157,19 +129,20 @@ def export_train_data_gpt(train_result):
 
 def train():
     # load saved model
-    model = torch.load(model_path, map_location=device)
+    # model = torch.load(model_path, map_location=device)
 
     # fine_turning model from pre train model
     # model = fine_turning_model(torch.load(pre_train_path, map_location=device))
 
     # train a new model
-    # model = MultiTaskModel()
+    model = MultiTaskModel()
 
     # model.load_state_dict(torch.load(model_path))
-    epochs = 10
-    lr = 0.001
+    epochs = 3
+    lr = 0.0001
+    log_step = 100
     loss_fn = CrossEntropyLoss()  # nllloss(log_softmax)
-    optimizer = AdamW(filter(lambda p: p.requires_grad, model.parameters()), lr=lr, weight_decay=0.0005)
+    optimizer = AdamW(filter(lambda p: p.requires_grad, model.parameters()), lr=lr, weight_decay=0.005)
     # optimizer=SGD(model.parameters(),lr=lr,weight_decay=0.09,momentum=0.99)
     scheduler = torch.optim.lr_scheduler.ExponentialLR(optimizer, gamma=0.9)
     print(model)
@@ -185,8 +158,11 @@ def train():
         running_correct_cla = 0
         _running_correct_obj = 0
         _running_correct_cla = 0
+        batch_step = 0
         model.train()
-        for data, label in hj_generate.train_dataloader:
+
+        for data, label in random.choice([hj_generate.train_dataloader, hj_generate.test_dataloader]):
+            batch_step +=1
             X_train, y_train = data, label
             X_train, y_train = Variable(X_train).to(device), Variable(y_train).to(device)
             outputs = model(X_train)
@@ -204,10 +180,10 @@ def train():
             loss_total = torch.zeros(1, device=device)
             # for multi-task
             for out_obj_ele, out_cla_ele, y_train_ele in zip(out_obj, out_cla, y_train):
-                loss_obj += loss_fn(out_obj_ele, y_train_ele[0].long())
+                loss_obj = loss_fn(out_obj_ele, y_train_ele[0].long())
                 if y_train_ele[0]:
-                    loss_cla += loss_fn(out_cla_ele, y_train_ele[1].long())
-                loss_total += (1.0 * loss_obj + 1.4 * loss_cla)
+                    loss_cla = loss_fn(out_cla_ele, y_train_ele[1].long())
+                loss_total += (1.0 * loss_obj + 1.0 * loss_cla)
 
             loss_total /= label.shape[0]
             loss_total.backward()
@@ -231,6 +207,32 @@ def train():
             running_correct_cla += value_cla
             _running_correct_obj += _value_obj
             _running_correct_cla += _value_cla
+            if batch_step % log_step == 0:
+                print(data.shape)
+                # training loss
+                training_pre_loss = running_loss / batch_step
+
+                # object distinguish accuracy(confidence)
+                training_pre_correct_obj = running_correct_obj / batch_step
+
+                # classical distinguish accuracy(confidence)
+                training_pre_correct_cla = running_correct_cla / batch_step
+
+                # object distinguish accuracy(equality)
+                _training_pre_correct_obj = _running_correct_obj / batch_step
+
+                # classical distinguish accuracy(equality)
+                _training_pre_correct_cla = _running_correct_cla / batch_step
+
+
+                print("[loss]:{}\t[tcoc]:{}\t[tccc]:{}\t[tcoe]:{}\t[tcce]:{}".format(training_pre_loss,
+                                                                                     training_pre_correct_obj,
+                                                                                     training_pre_correct_cla,
+                                                                                     _training_pre_correct_obj,
+                                                                                     _training_pre_correct_cla))
+                print('-'*10)
+
+
 
         # implement in train set
         # training_pre_correct_obj, training_pre_correct_cla, _training_pre_correct_obj, _training_pre_correct_cla \
@@ -272,9 +274,14 @@ def train():
                   _training_pre_correct_cla,
                   testing_pre_correct_obj, testing_pre_correct_cla, _testing_pre_correct_obj, _testing_pre_correct_cla,
                   valid_pre_correct_obj, valid_pre_correct_cla, _valid_pre_correct_obj, _valid_pre_correct_cla]
+        print("Epoch ending")
         show(result)
         export_train_data(result)
-
+        # hl_visualize(epoch, log_step,
+        #              training_pre_loss,
+        #              valid_pre_correct_obj,
+        #              valid_pre_correct_cla,
+        #              model)
         scheduler.step()
     torch.save(best_model, save_path)
     # torch.onnx.export(best_model, input_data, save_path, opset_version=9, verbose=True, input_names=input_names,
@@ -282,5 +289,4 @@ def train():
 
 
 if __name__ == "__main__":
-    # train()
-    export_train_data_gpt([1, 2, 3, 4, 5, 4, 3, 4, 3, 3, 3, 3, 3])
+    train()
