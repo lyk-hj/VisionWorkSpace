@@ -11,7 +11,7 @@ import numpy as np
 
 fp16 = True
 dynamic = True
-file_name='2023_4_9_hj_num_1'
+file_name='2023_4_21_hj_num_1'
 model_path = '../weight/'+file_name+'.pt'
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 print(device)
@@ -21,6 +21,7 @@ def convert_fp16(save_path):
     onnx_model = onnx.load_model(save_path)
     fp16_onnx_model = convert_float_to_float16(onnx_model, keep_io_types=False)
     onnx.save_model(fp16_onnx_model,save_path)
+
 
 def export(model, save_path):
     # python rules height before width, while opencv rules width before height
@@ -34,6 +35,7 @@ def export(model, save_path):
                       dynamic_axes={'input': {0: '1', 2: 'height', 3: 'width'}} if 'dyn' in save_path else None)
     if 'fp16' in save_path:
         convert_fp16(save_path)
+
 
 def pt_2onnx():
     model = torch.load(model_path)
@@ -57,6 +59,7 @@ def pt_2onnx():
         trans_path = initial_path + '_dyn_fp16'
         export(model, trans_path + '.onnx')
 
+
 def pt2h5():
     output_path = '../h5_model/' + file_name + '.h5'
     pt_model = torch.load(model_path)
@@ -79,6 +82,7 @@ def pt2h5():
     model = keras.models.load_model(output_path)
     model.summary()
     print(model)
+
 
 if __name__=="__main__":
     pt_2onnx()

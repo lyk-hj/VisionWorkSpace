@@ -13,7 +13,7 @@ c3_ouc = 64
 c4_ouc = 64
 c5_inc = 256
 c5_ouc = 32
-classes = 9
+classes = 8
 
 
 class Conv(nn.Module):
@@ -89,6 +89,7 @@ class BlockNeck(nn.Module):
 
     def forward(self, x):
         return self.act(self.bn(self.block_neck(x)))
+
 
 class FC(nn.Module):
     def __init__(self, ins, ous, bias=False, drop=False, act=False, bn=True):
@@ -185,6 +186,7 @@ class MultiTaskModel(nn.Module):
         fc = self.dense(hid4)
         output = self.concat([self.softmax(fc[:, :2]), self.softmax(fc[:, 2:classes+2])])  # ends should point out
         return output
+
 
 class Model9(nn.Module):
     def __init__(self) -> None:

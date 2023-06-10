@@ -2,6 +2,8 @@
 /data1/
 /data2/
 /data3/
+/datac/
+/fruit_360/
 /enhance_template/
 /N0data2/
 /N0data3/
@@ -12,3 +14,9 @@
 /selfVis/
 /data7/
 *__pycache__
+/demo/
+/v5/validation/
+/v5/test_bug*
+*rec*
+*rpn*
+*bcb*

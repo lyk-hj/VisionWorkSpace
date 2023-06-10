@@ -13,8 +13,8 @@ import hiddenlayer as hl
 from visualize_train import hl_visualize
 import copy
 
-file_name = '2023_4_9_hj_num_1'
-new_name = '2023_4_9_hj_num_1'
+file_name = '2023_4_21_hj_num_1'
+new_name = '2023_4_21_hj_num_1'
 pre_train_name = '2023_3_11_hj_num_1'
 model_path = '../weight/' + file_name + '.pt'
 save_path = '../weight/' + new_name + '.pt'
@@ -115,17 +115,17 @@ def train():
 
     # model.load_state_dict(torch.load(model_path))
     epochs = 10
-    lr = 0.00000000001
+    lr = 0.0001
     log_step = 100
     loss_fn = CrossEntropyLoss()
-    # optimizer = AdamW(filter(lambda p: p.requires_grad, model.parameters()), lr=lr, weight_decay=0.8)
-    optimizer=SGD(model.parameters(),lr=lr,weight_decay=0.09,momentum=0.99)
+    optimizer = AdamW(filter(lambda p: p.requires_grad, model.parameters()), lr=lr, weight_decay=0.0005)
+    # optimizer=SGD(model.parameters(),lr=lr,weight_decay=0.09,momentum=0.99)
     scheduler = torch.optim.lr_scheduler.ExponentialLR(optimizer, gamma=0.9)
     print(model)
     model = model.to(device)
 
     best_model = copy.deepcopy(model)
-    best_accuracy = 0.89
+    best_accuracy = 0.9
     history = hl.History()
     canvas = hl.Canvas()
     for epoch in range(epochs):

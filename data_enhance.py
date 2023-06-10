@@ -1,6 +1,7 @@
 import cv2,glob,os,shutil,random
 import numpy as np
 
+
 def move_2_to_3():
     all_imgs_path = glob.glob(r'./data2/*.jpg')
     for img in all_imgs_path:
@@ -26,6 +27,7 @@ def move_2_to_3():
             file_name = './data3/'+img[start-2:real_end]+'.jpg'
             shutil.move(img,'./data3/')
             print(file_name)
+
 
 def data_enhance():
     all_imgs_path = glob.glob(r'./data3/*.jpg')
@@ -78,17 +80,19 @@ def data_enhance():
         # print(save_name)
         # cv2.imwrite(save_name,src)
 
+
 def change_path_name():
     index = 0
     # original path
-    all_imgs_path = glob.glob(r'./data1/5/*.jpg')
+    all_imgs_path = glob.glob(r'./datac/qian/*.jpg')
     print(all_imgs_path)
     for img in all_imgs_path:
         # new path
-        new_name = img[:10] + "5_" + str(index) + ".jpg"
+        new_name = img[:13] + "8_" + str(index) + ".jpg"
         print(new_name)
         index+=1
         os.rename(img,new_name)
+
 
 def impulse_noise_7():
     index = 2
@@ -117,7 +121,6 @@ def impulse_noise_7():
         index+=1
 
 
-
 def impulse_noise_8():
     index = 2
     all_imgs_path = glob.glob(r'./data1/8*.png')
@@ -144,6 +147,7 @@ def impulse_noise_8():
         cv2.imwrite(new_name, src)
         index+=1
 
+
 def resize_7():
     data_sizes = [(20, 30), (30, 45), (40, 60), (50, 75), (60, 90), (80, 120)]
     index = 0
@@ -159,8 +163,6 @@ def resize_7():
         print(save_name)
         cv2.imwrite(save_name, src)
         index+=1
-
-
 
 
 def resize_8():
@@ -179,8 +181,27 @@ def resize_8():
         cv2.imwrite(save_name,src)
         index+=1
 
+
+def get_mean_std():
+    img_path = glob.glob(r"./datac/*.jpg")
+    r = []
+    g = []
+    b = []
+    for img in img_path:
+        src = cv2.imread(img) / 255.0
+        r.append(src[0])
+        g.append(src[1])
+        b.append(src[2])
+    # print(srcs)
+    print(np.mean(r), np.mean(g), np.mean(b))
+    print(np.std(r, ddof=1), np.std(g, ddof=1), np.std(b, ddof=1))
+
+
+
 if __name__ == "__main__":
-    impulse_noise_7()
-    impulse_noise_8()
-    resize_8()
-    resize_7()
+    # impulse_noise_7()
+    # impulse_noise_8()
+    # resize_8()
+    # resize_7()
+    # change_path_name()
+    get_mean_std()

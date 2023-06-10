@@ -24,6 +24,8 @@ transform = transforms.Compose([
     transforms.ToTensor(),
 ])
 
+BATCH_SIZE = 16
+
 
 def random_data_enhance(data, label, data_border, enhance_flag, crop_mode):
     out_size = None
@@ -152,9 +154,8 @@ def increase_noise(data, out_size, label=None, act_size=None, crop_mode=None):
     return resize(data, out_size)
 
 
-
 def clip_superfluous_pixel(data, out_size, label=None, act_size=None, crop_mode=None):
-    if label == 0:
+    if label == 0 or label == 1:
         return resize(data, out_size)
     rows, cols = data.shape[:2]
     row_start = 0
@@ -200,6 +201,28 @@ def crop(data, out_size, label=None, act_size=None, crop_mode=None):
            crop_w_start:crop_w_start + out_size[1]]
 
 
+def random_data_flip(data, enhance_flag):
+    fun = {
+        -1: flip_vertical,
+        -2: flip_horizontal,
+        -3: flip_simultaneous
+    }
+
+    return fun[enhance_flag](data)
+
+
+def flip_horizontal(data):
+    return cv2.flip(data, 1)
+
+
+def flip_vertical(data):
+    return cv2.flip(data, 0)
+
+
+def flip_simultaneous(data):
+    return cv2.flip(data, -1)
+
+
 # 通过创建data.Dataset子类Mydataset来创建输入
 # classes = 8
 class Mydataset(data.Dataset):
@@ -228,12 +251,14 @@ class Mydataset(data.Dataset):
         # cv2.imshow("src", data)
         if not self.is_verification:
             crop_mode = self.crop_flag[index]
-            enhance_flag = random.randint(-5, 5)
+            enhance_flag = random.randint(-3, 5)
             data = random_data_enhance(data, label, self.data_border, enhance_flag, crop_mode)
-
+            if enhance_flag < 0 and label != 7:
+                data = random_data_flip(data, enhance_flag)
+                label = 0
         else:
             data = resize(data, (self.data_border, self.data_border))
-        _, data = cv2.threshold(data,0,255,cv2.THRESH_BINARY or cv2.THRESH_OTSU)
+        _, data = cv2.threshold(data, 0, 255, cv2.THRESH_BINARY or cv2.THRESH_OTSU)
         # cv2.imshow("data", data)
         # cv2.waitKey(0)
         data = np.reshape(data.astype(np.float32) / 255.0, (1, data.shape[0], data.shape[1]))
@@ -246,20 +271,20 @@ all_imgs_path = []
 valid_imgs_path = []
 data0_path = glob.glob(r'../data0/*g')
 data1_path = glob.glob(r"../data1/*g")
-# data2_path = glob.glob(r'../data2/*g')
+data2_path = glob.glob(r'../data2/*g')
 # data1_path = glob.glob(r"../data1/7*")
-data2_path = glob.glob(r'../data2/7*')
+# data2_path = glob.glob(r'../data2/7*')
 # data1_path.extend(glob.glob(r"../data1/8*"))
-data2_path.extend(glob.glob(r"../data2/8*"))
+# data2_path.extend(glob.glob(r"../data2/8*"))
 # data1_path.extend(glob.glob(r"../data1/6*"))
-data2_path.extend(glob.glob(r"../data2/6*"))
-data2_path.extend(glob.glob(r"../data2/0*"))
+# data2_path.extend(glob.glob(r"../data2/6*"))
+# data2_path.extend(glob.glob(r"../data2/0*"))
 data3_path = glob.glob(r'../data3/*g')
-data7_path = glob.glob(r"../data7/*g")
+# data7_path = glob.glob(r"../data7/*g")
 
-# valid_imgs_path.extend(data0_path)
-# valid_imgs_path.extend(data3_path)
-valid_imgs_path.extend(data7_path)
+valid_imgs_path.extend(data0_path)
+valid_imgs_path.extend(data3_path)
+# valid_imgs_path.extend(data7_path)
 # print(valid_imgs_path)
 
 all_imgs_path.extend(data1_path)
@@ -271,10 +296,10 @@ strong_data_path = []
 data_crop_flags = []
 for i in range(23):
     for img in all_imgs_path:
+        if img[9] == '8':
+            continue
         strong_data_path.append(img)
         data_crop_flags.append(i)
-
-BATCH_SIZE = 8
 
 index = np.random.permutation(len(strong_data_path))
 all_imgs_path = np.array(strong_data_path)[index]  # 打乱数据
@@ -287,8 +312,10 @@ train_crop_flags = all_crop_flags[:a]
 test_imgs = all_imgs_path[a:]
 test_crop_flags = all_crop_flags[a:]
 
-train_datasets = [Mydataset(train_imgs, train_crop_flags, transform, is_verification=False) for _ in range(10)]  # get train dataset rule
-train_dataloaders = [data.DataLoader(train_dataset, BATCH_SIZE, True, drop_last=True) for train_dataset in train_datasets]  # get train dataloader
+train_datasets = [Mydataset(train_imgs, train_crop_flags, transform, is_verification=False) for _ in
+                  range(10)]  # get train dataset rule
+train_dataloaders = [data.DataLoader(train_dataset, BATCH_SIZE, True, drop_last=True) for train_dataset in
+                     train_datasets]  # get train dataloader
 
 test_dataset = Mydataset(test_imgs, test_crop_flags, transform, is_verification=False)  # get test dataset rule
 test_dataloader = data.DataLoader(test_dataset, BATCH_SIZE, True, drop_last=True)  # get test dataloader
